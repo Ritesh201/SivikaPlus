@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f9fafb;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --brand: #f97316;
+  --brand-dark: #ea580c;
+  --brand-light: #fff7ed;
+  --seller-primary: #7c3aed;
+  --seller-dark: #6d28d9;
+  --seller-light: #f5f3ff;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* Utility classes */
+.page-container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+.card { background: #fff; border-radius: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid #f1f5f9; }
+.badge-pending { background: #fef3c7; color: #92400e; padding: .2rem .6rem; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
+.badge-approved { background: #d1fae5; color: #065f46; padding: .2rem .6rem; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
+.badge-rejected { background: #fee2e2; color: #991b1b; padding: .2rem .6rem; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
+
+/* Spinner */
+.spinner {
+  width: 2rem; height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
