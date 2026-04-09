@@ -1,228 +1,167 @@
-import { useEffect, useState } from 'react';
-import { Package, TrendingUp, IndianRupee, ShoppingBag, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
-import { sellerApi, listingApi } from '../../api';
-import { useAuth } from '../../context/AuthContext';
-import toast from 'react-hot-toast';
-import './SellerDashboard.css';
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../../store/authStore'
+import api from '../../services/api'
+import Spinner from '../../components/common/Spinner'
+import { Package, ShoppingCart, DollarSign, TrendingUp, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
+
+function StatCard({ icon: Icon, label, value, color, bg }) {
+  return (
+    <div className="card" style={{ padding: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
+        <p style={{ fontSize: '.8rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.04em' }}>{label}</p>
+        <div style={{ width: 36, height: 36, borderRadius: 9, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={18} color={color} />
+        </div>
+      </div>
+      <p style={{ fontSize: '1.6rem', fontWeight: 800, color: '#111' }}>{value}</p>
+    </div>
+  )
+}
+
+const STATUS_COLOR = {
+  PENDING: { bg: '#fef3c7', color: '#92400e' },
+  CONFIRMED: { bg: '#dbeafe', color: '#1e40af' },
+  PROCESSING: { bg: '#ede9fe', color: '#5b21b6' },
+  SHIPPED: { bg: '#cffafe', color: '#155e75' },
+  DELIVERED: { bg: '#d1fae5', color: '#065f46' },
+  CANCELLED: { bg: '#fee2e2', color: '#991b1b' },
+}
 
 export default function SellerDashboard() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState(null);
-  const [listings, setListings] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [settlements, setSettlements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('listings');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const { user } = useAuth()
+  const [stats, setStats] = useState(null)
+  const [orders, setOrders] = useState([])
+  const [listings, setListings] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
-      sellerApi.getDashboard().catch(() => ({ data: {} })),
-      listingApi.getMyListings().catch(() => ({ data: [] })),
-      sellerApi.getOrders().catch(() => ({ data: [] })),
-      sellerApi.getSettlements().catch(() => ({ data: [] })),
-    ]).then(([dashRes, listRes, ordRes, settRes]) => {
-      setStats(dashRes.data);
-      setListings(listRes.data || []);
-      setOrders(ordRes.data || []);
-      setSettlements(settRes.data || []);
-    }).finally(() => setLoading(false));
-  }, []);
+      api.get('/seller/settlements/summary').catch(() => ({ data: { totalPaid: 0, totalPending: 0 } })),
+      api.get('/seller/orders?page=0&size=5').catch(() => ({ data: { content: [], totalElements: 0 } })),
+      api.get('/seller/listings?page=0&size=5').catch(() => ({ data: { content: [], totalElements: 0 } })),
+    ]).then(([summaryRes, ordersRes, listingsRes]) => {
+      setStats(summaryRes.data)
+      setOrders(ordersRes.data.content || [])
+      setListings(listingsRes.data.content || [])
+    }).finally(() => setLoading(false))
+  }, [])
 
-  const handleDeleteListing = async (id) => {
-    if (!window.confirm('Delete this listing?')) return;
-    try {
-      await listingApi.delete(id);
-      setListings(listings.filter(l => l.id !== id));
-      toast.success('Listing deleted');
-    } catch { toast.error('Failed to delete'); }
-  };
+  const status = user?.sellerProfile?.verificationStatus
 
-  const STAT_CARDS = [
-    { icon: <Package size={22} />, label: 'Total Listings', value: stats?.totalListings ?? listings.length, color: 'pink' },
-    { icon: <ShoppingBag size={22} />, label: 'Total Orders', value: stats?.totalOrders ?? orders.length, color: 'purple' },
-    { icon: <IndianRupee size={22} />, label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`, color: 'orange' },
-    { icon: <TrendingUp size={22} />, label: 'Pending Settlement', value: `₹${(stats?.pendingSettlement || 0).toLocaleString('en-IN')}`, color: 'gold' },
-  ];
-
-  const TABS = ['listings', 'orders', 'settlements'];
+  if (loading) return <Spinner center />
 
   return (
-    <div className="seller-dashboard container animate-fade">
+    <div>
       {/* Header */}
-      <div className="sd-header">
-        <div>
-          <h1 className="page-title">Seller Dashboard</h1>
-          <p className="sd-subtitle">Welcome back, {user?.name}</p>
-        </div>
-        <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-          <Plus size={16} /> Add Listing
-        </button>
+      <div style={{ marginBottom: '1.75rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111', marginBottom: '.25rem' }}>
+          Welcome back, {user?.sellerProfile?.businessName || user?.fullName} 👋
+        </h1>
+        <p style={{ color: '#6b7280', fontSize: '.9rem' }}>Here's what's happening with your store today.</p>
       </div>
 
-      {/* Stat cards */}
-      <div className="dashboard-grid sd-stats">
-        {STAT_CARDS.map((s) => (
-          <div key={s.label} className={`card sd-stat-card sd-stat-${s.color}`}>
-            <div className="sd-stat-icon">{s.icon}</div>
-            <div className="sd-stat-value">{loading ? <div className="skeleton" style={{width:60,height:24,borderRadius:8}} /> : s.value}</div>
-            <div className="sd-stat-label">{s.label}</div>
+      {/* Verification notice */}
+      {status !== 'APPROVED' && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: '.75rem', padding: '1rem 1.25rem',
+          borderRadius: '.75rem', marginBottom: '1.5rem',
+          background: status === 'REJECTED' ? '#fef2f2' : '#fffbeb',
+          border: `1px solid ${status === 'REJECTED' ? '#fecaca' : '#fde68a'}`,
+        }}>
+          <AlertCircle size={20} color={status === 'REJECTED' ? '#dc2626' : '#d97706'} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p style={{ fontWeight: 600, color: status === 'REJECTED' ? '#991b1b' : '#92400e', marginBottom: '.2rem' }}>
+              {status === 'REJECTED' ? 'Account Rejected' : 'Pending Admin Approval'}
+            </p>
+            <p style={{ fontSize: '.85rem', color: status === 'REJECTED' ? '#b91c1c' : '#a16207' }}>
+              {status === 'REJECTED'
+                ? 'Your seller account was rejected. Please contact support@SivikaPlus.com for assistance.'
+                : 'Your account is under review. You can explore the dashboard, but adding products requires approval.'}
+            </p>
           </div>
-        ))}
+        </div>
+      )}
+
+      {status === 'APPROVED' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.75rem 1rem', background: '#d1fae5', border: '1px solid #a7f3d0', borderRadius: '.75rem', marginBottom: '1.5rem' }}>
+          <CheckCircle2 size={18} color="#059669" />
+          <p style={{ fontSize: '.85rem', color: '#065f46', fontWeight: 500 }}>Your account is verified. You can add products and listings.</p>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <StatCard icon={Package} label="My Listings" value={listings.length || '0'} color="#7c3aed" bg="#ede9fe" />
+        <StatCard icon={ShoppingCart} label="Recent Orders" value={orders.length || '0'} color="#2563eb" bg="#dbeafe" />
+        <StatCard icon={DollarSign} label="Settled Earnings" value={`₹${Number(stats?.totalPaid || 0).toLocaleString('en-IN')}`} color="#059669" bg="#d1fae5" />
+        <StatCard icon={TrendingUp} label="Pending Payout" value={`₹${Number(stats?.totalPending || 0).toLocaleString('en-IN')}`} color="#d97706" bg="#fef3c7" />
       </div>
 
-      {/* Tabs */}
-      <div className="sd-tabs">
-        {TABS.map(t => (
-          <button key={t} className={`sd-tab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
+      {/* Two column layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
 
-      {/* Listings tab */}
-      {activeTab === 'listings' && (
-        <div className="sd-table-wrap">
+        {/* Recent Orders */}
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h2 style={{ fontWeight: 700, fontSize: '1rem', color: '#111' }}>Recent Orders</h2>
+            <Link to="/seller/orders" style={{ display: 'flex', alignItems: 'center', gap: '.25rem', fontSize: '.8rem', color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}>
+              View all <ArrowRight size={13} />
+            </Link>
+          </div>
+          {orders.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '.875rem', padding: '2rem 0' }}>No orders yet</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
+              {orders.map(o => {
+                const s = STATUS_COLOR[o.status] || STATUS_COLOR.PENDING
+                return (
+                  <div key={o.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '.75rem', borderBottom: '1px solid #f3f4f6' }}>
+                    <div>
+                      <p style={{ fontWeight: 600, fontSize: '.85rem', color: '#111', marginBottom: '.15rem' }}>{o.productName}</p>
+                      <p style={{ fontSize: '.75rem', color: '#6b7280' }}>Qty: {o.quantity}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontWeight: 700, fontSize: '.85rem', marginBottom: '.25rem' }}>₹{Number(o.totalPrice).toLocaleString('en-IN')}</p>
+                      <span style={{ fontSize: '.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 9999, background: s.bg, color: s.color }}>{o.status}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* My Listings */}
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h2 style={{ fontWeight: 700, fontSize: '1rem', color: '#111' }}>My Listings</h2>
+            <Link to="/seller/listings" style={{ display: 'flex', alignItems: 'center', gap: '.25rem', fontSize: '.8rem', color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}>
+              View all <ArrowRight size={13} />
+            </Link>
+          </div>
           {listings.length === 0 ? (
-            <div className="sd-empty">
-              <Package size={40} />
-              <p>No listings yet. Create your first listing!</p>
-              <button className="btn-primary" onClick={() => setShowAddModal(true)}><Plus size={14} /> Add Listing</button>
+            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+              <p style={{ color: '#9ca3af', fontSize: '.875rem', marginBottom: '.75rem' }}>No listings yet</p>
+              {status === 'APPROVED' && (
+                <Link to="/seller/listings/new" style={{ fontSize: '.8rem', color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}>+ Add your first listing</Link>
+              )}
             </div>
           ) : (
-            <table className="sd-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listings.map((l) => (
-                  <tr key={l.id}>
-                    <td className="sd-product-cell">
-                      <div className="sd-product-img">
-                        {l.imageUrl ? <img src={l.imageUrl} alt={l.productName} /> : <span>{l.productName?.[0]}</span>}
-                      </div>
-                      <span className="sd-product-name">{l.productName}</span>
-                    </td>
-                    <td><span className="badge badge-purple">{l.categoryName}</span></td>
-                    <td className="sd-price">₹{l.price?.toLocaleString('en-IN')}</td>
-                    <td>{l.stock ?? '—'}</td>
-                    <td>
-                      <span className={`badge ${l.active ? 'badge-green' : 'badge-orange'}`}>
-                        {l.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="sd-actions">
-                        <button className="sd-action-btn" title="View"><Eye size={15} /></button>
-                        <button className="sd-action-btn" title="Edit"><Edit2 size={15} /></button>
-                        <button className="sd-action-btn sd-action-delete" title="Delete" onClick={() => handleDeleteListing(l.id)}><Trash2 size={15} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
+              {listings.map(l => (
+                <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '.75rem', borderBottom: '1px solid #f3f4f6' }}>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '.85rem', color: '#111', marginBottom: '.15rem' }}>{l.productName}</p>
+                    <p style={{ fontSize: '.75rem', color: '#6b7280' }}>Stock: {l.stockQuantity}</p>
+                  </div>
+                  <p style={{ fontWeight: 700, fontSize: '.9rem', color: '#111' }}>₹{Number(l.price).toLocaleString('en-IN')}</p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      )}
-
-      {/* Orders tab */}
-      {activeTab === 'orders' && (
-        <div className="sd-table-wrap">
-          {orders.length === 0 ? (
-            <div className="sd-empty"><ShoppingBag size={40} /><p>No orders yet.</p></div>
-          ) : (
-            <table className="sd-table">
-              <thead><tr><th>Order ID</th><th>Buyer</th><th>Items</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td className="sd-order-id">#{o.id}</td>
-                    <td>{o.buyerName || '—'}</td>
-                    <td>{o.items?.length || 1}</td>
-                    <td className="sd-price">₹{o.totalAmount?.toLocaleString('en-IN')}</td>
-                    <td><span className={`badge badge-${o.status === 'DELIVERED' ? 'green' : o.status === 'PENDING' ? 'orange' : 'purple'}`}>{o.status}</span></td>
-                    <td className="sd-date">{new Date(o.createdAt).toLocaleDateString('en-IN')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {/* Settlements tab */}
-      {activeTab === 'settlements' && (
-        <div className="sd-table-wrap">
-          {settlements.length === 0 ? (
-            <div className="sd-empty"><IndianRupee size={40} /><p>No settlements yet.</p></div>
-          ) : (
-            <table className="sd-table">
-              <thead><tr><th>Settlement ID</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-              <tbody>
-                {settlements.map((s) => (
-                  <tr key={s.id}>
-                    <td>#{s.id}</td>
-                    <td className="sd-price">₹{s.amount?.toLocaleString('en-IN')}</td>
-                    <td><span className={`badge ${s.status === 'PAID' ? 'badge-green' : 'badge-orange'}`}>{s.status}</span></td>
-                    <td className="sd-date">{s.settledAt ? new Date(s.settledAt).toLocaleDateString('en-IN') : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {/* Add Listing Modal */}
-      {showAddModal && <AddListingModal onClose={() => setShowAddModal(false)} onCreated={(l) => { setListings([l, ...listings]); setShowAddModal(false); }} />}
-    </div>
-  );
-}
-
-function AddListingModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ productName: '', categoryId: '', price: '', stock: '', description: '', imageUrl: '' });
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.productName || !form.price) { toast.error('Name and price are required'); return; }
-    setLoading(true);
-    try {
-      const { data } = await listingApi.create({ ...form, price: parseFloat(form.price), stock: parseInt(form.stock) || 0 });
-      toast.success('Listing created!');
-      onCreated(data);
-    } catch { toast.error('Failed to create listing'); }
-    finally { setLoading(false); }
-  };
-
-  const f = (k, v) => setForm({ ...form, [k]: v });
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content card animate-fade-up" onClick={e => e.stopPropagation()}>
-        <h2 className="modal-title">Add New Listing</h2>
-        <form onSubmit={handleSubmit} className="modal-form">
-          <div className="form-group"><label className="form-label">Product Name *</label><input placeholder="e.g. Matte Lipstick" value={form.productName} onChange={e => f('productName', e.target.value)} /></div>
-          <div className="checkout-row">
-            <div className="form-group"><label className="form-label">Price (₹) *</label><input type="number" placeholder="999" value={form.price} onChange={e => f('price', e.target.value)} /></div>
-            <div className="form-group"><label className="form-label">Stock</label><input type="number" placeholder="100" value={form.stock} onChange={e => f('stock', e.target.value)} /></div>
-          </div>
-          <div className="form-group"><label className="form-label">Description</label><textarea rows={3} placeholder="Product description..." value={form.description} onChange={e => f('description', e.target.value)} /></div>
-          <div className="form-group"><label className="form-label">Image URL</label><input placeholder="https://..." value={form.imageUrl} onChange={e => f('imageUrl', e.target.value)} /></div>
-          <div className="modal-btns">
-            <button type="button" className="btn-outline" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Creating...' : 'Create Listing'}</button>
-          </div>
-        </form>
       </div>
     </div>
-  );
+  )
 }

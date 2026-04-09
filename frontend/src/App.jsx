@@ -1,76 +1,109 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import Navbar from './components/common/Navbar';
-import ProtectedRoute from './components/common/ProtectedRoute';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AuthProvider, useAuth } from './store/authStore'
 
-// Pages
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import HomePage from './pages/buyer/HomePage';
-import ProductListPage from './pages/buyer/ProductListPage';
-import ProductDetailPage from './pages/buyer/ProductDetailPage';
-import CartPage from './pages/buyer/CartPage';
-import CheckoutPage from './pages/buyer/CheckoutPage';
-import OrdersPage from './pages/buyer/OrdersPage';
-import SellerDashboard from './pages/seller/SellerDashboard';
+// Layouts
+import CustomerLayout from './components/layout/CustomerLayout'
+import SellerLayout from './components/layout/SellerLayout'
+
+// Auth
+import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
+
+// Customer pages
+import Home from './pages/customer/Home'
+import ProductList from './pages/customer/ProductList'
+import ProductDetail from './pages/customer/ProductDetail'
+import Search from './pages/customer/Search'
+import Cart from './pages/customer/Cart'
+import Checkout from './pages/customer/Checkout'
+import Orders from './pages/customer/Orders'
+import Profile from './pages/customer/Profile'
+
+// Seller pages
+import SellerDashboard from './pages/seller/SellerDashboard'
+import SellerProducts from './pages/seller/SellerProducts'
+import SellerListings from './pages/seller/SellerListings'
+import SellerOrders from './pages/seller/SellerOrders'
+import SellerSettlements from './pages/seller/SellerSettlements'
+
+// ---- Route guards ----
+
+/** Require any authenticated user */
+function RequireAuth({ children }) {
+  const { token } = useAuth()
+  const location = useLocation()
+  if (!token) return <Navigate to="/login" state={{ from: location }} replace />
+  return children
+}
+
+/** Require SELLER role — redirect customers to shop */
+function RequireSeller({ children }) {
+  const { token, user } = useAuth()
+  const location = useLocation()
+  if (!token) return <Navigate to="/login" state={{ from: location }} replace />
+  if (user?.role !== 'SELLER' && user?.role !== 'ADMIN') return <Navigate to="/" replace />
+  return children
+}
+
+/**
+ * If a SELLER hits a customer-facing route (e.g. "/"),
+ * redirect them to /seller automatically.
+ */
+function CustomerGuard({ children }) {
+  const { user, token } = useAuth()
+  if (token && (user?.role === 'SELLER' || user?.role === 'ADMIN')) {
+    return <Navigate to="/seller" replace />
+  }
+  return children
+}
+
+/** Redirect logged-in users away from login/register */
+function GuestOnly({ children }) {
+  const { token, user } = useAuth()
+  if (token) {
+    return <Navigate to={user?.role === 'SELLER' ? '/seller' : '/'} replace />
+  }
+  return children
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* ---- Auth ---- */}
+      <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+      <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+
+      {/* ---- Seller Portal ---- */}
+      <Route path="/seller" element={<RequireSeller><SellerLayout /></RequireSeller>}>
+        <Route index element={<SellerDashboard />} />
+        <Route path="products" element={<SellerProducts />} />
+        <Route path="listings" element={<SellerListings />} />
+        <Route path="orders" element={<SellerOrders />} />
+        <Route path="settlements" element={<SellerSettlements />} />
+      </Route>
+
+      {/* ---- Customer Shop ---- */}
+      <Route path="/" element={<CustomerGuard><CustomerLayout /></CustomerGuard>}>
+        <Route index element={<Home />} />
+        <Route path="products" element={<ProductList />} />
+        <Route path="products/:slug" element={<ProductDetail />} />
+        <Route path="search" element={<Search />} />
+        <Route path="cart" element={<RequireAuth><Cart /></RequireAuth>} />
+        <Route path="checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+        <Route path="orders" element={<RequireAuth><Orders /></RequireAuth>} />
+        <Route path="profile" element={<RequireAuth><Profile /></RequireAuth>} />
+      </Route>
+
+      {/* ---- Catch-all ---- */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <div className="app">
-            <Navbar />
-            <main>
-              <Routes>
-                {/* Public */}
-                <Route path="/" element={<HomePage />} />
-                <Route path="/products" element={<ProductListPage />} />
-                <Route path="/products/:id" element={<ProductDetailPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-
-                {/* Buyer protected */}
-                <Route path="/cart" element={
-                  <ProtectedRoute role="BUYER"><CartPage /></ProtectedRoute>
-                } />
-                <Route path="/checkout" element={
-                  <ProtectedRoute role="BUYER"><CheckoutPage /></ProtectedRoute>
-                } />
-                <Route path="/orders" element={
-                  <ProtectedRoute role="BUYER"><OrdersPage /></ProtectedRoute>
-                } />
-
-                {/* Seller protected */}
-                <Route path="/seller/dashboard" element={
-                  <ProtectedRoute role="SELLER"><SellerDashboard /></ProtectedRoute>
-                } />
-
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-          </div>
-
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: '#1A1A1A',
-                color: '#fff',
-                border: '1px solid #2A2A2A',
-                borderRadius: '12px',
-                fontFamily: 'DM Sans, sans-serif',
-                fontSize: '14px',
-              },
-              success: { iconTheme: { primary: '#00E5A0', secondary: '#1A1A1A' } },
-              error: { iconTheme: { primary: '#FF4D4D', secondary: '#1A1A1A' } },
-            }}
-          />
-        </CartProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  );
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  )
 }

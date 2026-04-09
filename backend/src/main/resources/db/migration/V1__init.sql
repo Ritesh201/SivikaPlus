@@ -1,8 +1,8 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE SCHEMA IF NOT EXISTS multimart;
-SET search_path TO multimart;
+CREATE SCHEMA IF NOT EXISTS sivikaplus;
+SET search_path TO sivikaplus;
 
 
 -- USERS
