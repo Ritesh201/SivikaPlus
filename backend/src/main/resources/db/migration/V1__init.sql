@@ -1,13 +1,14 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+
 CREATE SCHEMA IF NOT EXISTS sivikaplus;
 SET search_path TO sivikaplus;
 
-
 -- USERS
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
@@ -22,7 +23,7 @@ CREATE TABLE users (
 
 -- SELLER PROFILES
 CREATE TABLE seller_profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     user_id UUID UNIQUE NOT NULL,
     business_name VARCHAR(255) NOT NULL,
     business_description TEXT,
@@ -39,7 +40,7 @@ CREATE TABLE seller_profiles (
 
 -- REFRESH TOKENS
 CREATE TABLE refresh_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     user_id UUID NOT NULL,
     token VARCHAR(500) UNIQUE NOT NULL,
     expires_at TIMESTAMP NOT NULL,
@@ -50,7 +51,7 @@ CREATE TABLE refresh_tokens (
 
 -- CATEGORIES
 CREATE TABLE categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     name VARCHAR(255) UNIQUE NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
@@ -61,7 +62,7 @@ CREATE TABLE categories (
 
 -- PRODUCTS
 CREATE TABLE products (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     name VARCHAR(500) NOT NULL,
     slug VARCHAR(500) UNIQUE NOT NULL,
     description TEXT,
@@ -73,12 +74,13 @@ CREATE TABLE products (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
 -- PRODUCT IMAGES
 CREATE TABLE product_images (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     product_id UUID NOT NULL,
     image_url TEXT NOT NULL,
     alt_text TEXT,
@@ -90,7 +92,7 @@ CREATE TABLE product_images (
 
 -- LISTINGS
 CREATE TABLE listings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     seller_id UUID NOT NULL,
     product_id UUID NOT NULL,
     price DECIMAL(12,2) NOT NULL,
@@ -109,7 +111,7 @@ CREATE TABLE listings (
 
 -- ADDRESSES
 CREATE TABLE addresses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     user_id UUID NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(20) NOT NULL,
@@ -126,7 +128,7 @@ CREATE TABLE addresses (
 
 -- ORDERS
 CREATE TABLE orders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     order_number VARCHAR(255) UNIQUE NOT NULL,
     customer_id UUID NOT NULL,
     address_id UUID,
@@ -142,7 +144,7 @@ CREATE TABLE orders (
 
 -- ORDER ITEMS
 CREATE TABLE order_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     order_id UUID NOT NULL,
     listing_id UUID NOT NULL,
     seller_id UUID NOT NULL,
@@ -162,7 +164,7 @@ CREATE TABLE order_items (
 
 -- PAYMENTS
 CREATE TABLE payments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     order_id UUID NOT NULL,
     razorpay_order_id VARCHAR(255) UNIQUE,
     razorpay_payment_id VARCHAR(255) UNIQUE,
@@ -179,7 +181,7 @@ CREATE TABLE payments (
 
 -- SETTLEMENTS
 CREATE TABLE settlements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     seller_id UUID NOT NULL,
     order_item_id UUID NOT NULL,
     payment_id UUID,
@@ -209,7 +211,7 @@ CREATE TABLE cart_items (
 
 -- SELLER PRODUCTS
 CREATE TABLE IF NOT EXISTS seller_products (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY DEFAULT  gen_random_uuid(),
     seller_id   UUID         NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name        VARCHAR(500) NOT NULL,
     slug        VARCHAR(500) NOT NULL UNIQUE,
