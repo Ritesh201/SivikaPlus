@@ -13,9 +13,18 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:3000")
+                        .allowedOrigins(
+                                "http://localhost:3000",
+                                "http://localhost:5173",
+                                "http://sivikaplus.com",
+                                "https://sivikaplus.com",
+                                "http://www.sivikaplus.com",
+                                "https://www.sivikaplus.com",
+                                "http://161.118.174.124"
+                        )
                         .allowedMethods("*")
-                        .allowedHeaders("*");
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }
