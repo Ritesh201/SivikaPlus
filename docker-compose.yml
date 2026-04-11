@@ -1,34 +1,43 @@
 version: "3.9"
-
 services:
-
   postgres:
     image: postgres:16
-    container_name: multimart-postgres
+    container_name: sivikaplus-postgres
     environment:
-      POSTGRES_DB: multimart
+      POSTGRES_DB: sivikaplus
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
-    container_name: multimart-redis
+    container_name: sivikaplus-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
-    container_name: multimart-zookeeper
+    container_name: sivikaplus-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    container_name: multimart-kafka
+    container_name: sivikaplus-kafka
     depends_on:
       - zookeeper
     ports:
@@ -37,30 +46,42 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
 
   backend:
     build: ./backend
-    container_name: multimart-backend
+    container_name: sivikaplus-backend
     depends_on:
-      - postgres
-      - redis
-      - kafka
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     ports:
       - "8080:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/multimart
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sivikaplus
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       RAZORPAY_KEY_ID: 1234
       RAZORPAY_KEY_SECRET: 1234
 
   frontend:
     build: ./frontend
-    container_name: multimart-frontend
+    container_name: sivikaplus-frontend
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "3000:80"   # ✅ Fixed: nginx runs on 80 inside container
 
 volumes:
   postgres_data:
