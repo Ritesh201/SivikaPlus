@@ -21,7 +21,7 @@ public class Listing {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)  // ← change LAZY to EAGER
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 

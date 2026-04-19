@@ -44,7 +44,7 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/categories').then(r => setCategories(r.data || [])).catch(() => {})
+    api.get('/products/categories').then(r => setCategories(r.data || [])).catch(() => {})
   }, [])
 
   useEffect(() => {
