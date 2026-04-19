@@ -14,7 +14,8 @@ const STATUS = {
   REFUNDED:   { bg: '#f3f4f6', color: '#6b7280' },
 }
 
-const STATUS_FLOW = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']
+// const STATUS_FLOW = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']
+const STATUS_FLOW = ['PENDING']
 
 function printBill(order) {
   const win = window.open('', '_blank', 'width=480,height=650')

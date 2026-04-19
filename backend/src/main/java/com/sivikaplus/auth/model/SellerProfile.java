@@ -36,6 +36,12 @@ public class SellerProfile {
     @Column(name = "bank_ifsc_code")
     private String bankIfscCode;
 
+    @Column(name = "bank_account_holder_name")
+    private String bankAccountHolderName;
+
+    @Column(name = "bank_name")
+    private String bankName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status")
     @Builder.Default

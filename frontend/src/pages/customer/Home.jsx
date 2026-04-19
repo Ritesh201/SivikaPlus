@@ -133,7 +133,7 @@ export default function Home() {
                 View all <ArrowRight size={14} />
               </Link>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem' }}>
               {deals.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </section>
@@ -148,7 +148,7 @@ export default function Home() {
                 View all <ArrowRight size={14} />
               </Link>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem' }}>
               {products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </section>

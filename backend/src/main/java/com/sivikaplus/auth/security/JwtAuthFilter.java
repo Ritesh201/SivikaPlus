@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +24,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService; // ← Spring will inject UserDetailsServiceImpl
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -37,6 +39,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String jwt = header.substring(7);
             String email = jwtUtil.extractUsername(jwt);
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // ── check logout blacklist ──────────────────
+                if (Boolean.TRUE.equals(redisTemplate.hasKey("logout:" + email))) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token invalidated");
+                    return;
+                }
+
+                // ── check token blacklist (for refresh tokens) ──
+                if (Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:" + jwt))) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token blacklisted");
+                    return;
+                }
+                // ───────────────────────────────────────────────
                 UserDetails user = userDetailsService.loadUserByUsername(email);
                 if (jwtUtil.isTokenValid(jwt, user)) {
                     var auth = new UsernamePasswordAuthenticationToken(

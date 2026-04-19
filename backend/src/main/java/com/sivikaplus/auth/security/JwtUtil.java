@@ -23,6 +23,9 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    @Value("${jwt.refresh-expiration:604800000}") // 7 days default
+    private long refreshExpiration;
+
     public String generateToken(UserDetails userDetails, String role, String userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
@@ -51,6 +54,14 @@ public class JwtUtil {
     public <T> T extractClaim(String token, Function<Claims, T> resolver) {
         return resolver.apply(Jwts.parser().verifyWith(signingKey()).build()
                 .parseSignedClaims(token).getPayload());
+    }
+    public String generateRefreshToken(UserDetails userDetails) {
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(signingKey())
+                .compact();
     }
 
     private SecretKey signingKey() {

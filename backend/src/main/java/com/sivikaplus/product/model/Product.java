@@ -15,6 +15,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "products")
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
+@ToString(exclude = {"listings", "images"})
+@EqualsAndHashCode(exclude = {"listings", "images"})
 public class Product {
 
     @Id

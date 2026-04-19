@@ -4,6 +4,7 @@ import com.sivikaplus.auth.model.Otp;
 import com.sivikaplus.auth.repository.OtpRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -12,37 +13,46 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class OtpService {
 
     private final OtpRepository otpRepository;
-    private final Msg91Service msg91Service;  // ← replaced Fast2SmsService
+    private final Msg91Service msg91Service;
 
-    @Value("${otp.expiry-minutes}")
-    private int expiryMinutes;
-
-    public void generateAndSend(String mobile, String type) {
+    // Send OTP — returns reqId from MSG91
+    public String generateAndSend(String mobile, String type) {
+        // delete old OTPs
         otpRepository.deleteByMobileAndType(mobile, type);
 
-        String code = String.format("%06d", (int)(Math.random() * 1000000));
+        // send via MSG91 widget
+        String reqId = msg91Service.sendOtp(mobile);
 
+        // store reqId in DB so we can verify later
         Otp otp = Otp.builder()
                 .mobile(mobile)
-                .code(code)
+                .code(reqId)      // store reqId as code
                 .type(type)
                 .used(false)
-                .expiresAt(LocalDateTime.now().plusMinutes(expiryMinutes))
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .build();
 
         otpRepository.save(otp);
-        msg91Service.sendOtp(mobile, code);  // ← updated
+        log.info("OTP sent to {} with reqId: {}", mobile, reqId);
+
+        return reqId;
     }
 
-    public boolean verifyOtp(String mobile, String code, String type) {
+    // Verify OTP using reqId + otp from user
+    public boolean verifyOtp(String mobile, String otpCode, String type) {
         return otpRepository
                 .findTopByMobileAndTypeAndUsedFalseOrderByCreatedAtDesc(mobile, type)
                 .map(otp -> {
                     if (otp.getExpiresAt().isBefore(LocalDateTime.now())) return false;
-                    if (!otp.getCode().equals(code)) return false;
+
+                    // verify with MSG91
+                    boolean valid = msg91Service.verifyOtp(otp.getCode(), otpCode);
+                    if (!valid) return false;
+
                     otp.setUsed(true);
                     otpRepository.save(otp);
                     return true;
